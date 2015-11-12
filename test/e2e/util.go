@@ -1430,8 +1430,10 @@ func (config *DeploymentConfig) create() error {
 		},
 		Spec: extensions.DeploymentSpec{
 			Replicas: config.Replicas,
-			Selector: map[string]string{
-				"name": config.Name,
+			Selector: &extensions.LabelSelector{
+				MatchLabels: map[string]string{
+					"name": config.Name,
+				},
 			},
 			UniqueLabelKey: extensions.DefaultDeploymentUniqueLabelKey,
 			Template: api.PodTemplateSpec{
@@ -1908,6 +1910,55 @@ func waitForRCPodsGone(c *client.Client, rc *api.ReplicationController) error {
 	})
 }
 
+// Delete a ReplicaSet and all pods it spawned
+func DeleteReplicaSet(c *client.Client, ns, name string) error {
+	By(fmt.Sprintf("deleting ReplicaSet %s in namespace %s", name, ns))
+	rc, err := c.Extensions().ReplicaSets(ns).Get(name)
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			Logf("ReplicaSet %s was already deleted: %v", name, err)
+			return nil
+		}
+		return err
+	}
+	reaper, err := kubectl.ReaperFor(extensions.Kind("ReplicaSet"), c)
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			Logf("ReplicaSet %s was already deleted: %v", name, err)
+			return nil
+		}
+		return err
+	}
+	startTime := time.Now()
+	err = reaper.Stop(ns, name, 0, api.NewDeleteOptions(0))
+	if apierrs.IsNotFound(err) {
+		Logf("ReplicaSet %s was already deleted: %v", name, err)
+		return nil
+	}
+	deleteRSTime := time.Now().Sub(startTime)
+	Logf("Deleting RS %s took: %v", name, deleteRSTime)
+	if err == nil {
+		err = waitForReplicaSetPodsGone(c, rc)
+	}
+	terminatePodTime := time.Now().Sub(startTime) - deleteRSTime
+	Logf("Terminating ReplicaSet %s pods took: %v", name, terminatePodTime)
+	return err
+}
+
+// waitForReplicaSetPodsGone waits until there are no pods reported under a
+// ReplicaSet selector (because the pods have completed termination).
+func waitForReplicaSetPodsGone(c *client.Client, rs *extensions.ReplicaSet) error {
+	return wait.PollImmediate(poll, 2*time.Minute, func() (bool, error) {
+		selector, err := extensions.LabelSelectorAsSelector(rs.Spec.Selector)
+		expectNoError(err)
+		options := api.ListOptions{LabelSelector: selector}
+		if pods, err := c.Pods(rs.Namespace).List(options); err == nil && len(pods.Items) == 0 {
+			return true, nil
+		}
+		return false, nil
+	})
+}
+
 // Waits for the deployment to reach desired state.
 // Returns an error if minAvailable or maxCreated is broken at any times.
 func waitForDeploymentStatus(c *client.Client, ns, deploymentName string, desiredUpdatedReplicas, minAvailable, maxCreated, minReadySeconds int) error {
@@ -1917,21 +1968,21 @@ func waitForDeploymentStatus(c *client.Client, ns, deploymentName string, desire
 		if err != nil {
 			return false, err
 		}
-		oldRCs, err := deploymentutil.GetOldRCs(*deployment, c)
+		oldRSs, err := deploymentutil.GetOldReplicaSets(*deployment, c)
 		if err != nil {
 			return false, err
 		}
-		newRC, err := deploymentutil.GetNewRC(*deployment, c)
+		newRS, err := deploymentutil.GetNewReplicaSet(*deployment, c)
 		if err != nil {
 			return false, err
 		}
-		if newRC == nil {
+		if newRS == nil {
 			// New RC hasnt been created yet.
 			return false, nil
 		}
-		allRCs := append(oldRCs, newRC)
-		totalCreated := deploymentutil.GetReplicaCountForRCs(allRCs)
-		totalAvailable, err := deploymentutil.GetAvailablePodsForRCs(c, allRCs, minReadySeconds)
+		allRSs := append(oldRSs, newRS)
+		totalCreated := deploymentutil.GetReplicaCountForReplicaSets(allRSs)
+		totalAvailable, err := deploymentutil.GetAvailablePodsForReplicaSets(c, allRSs, minReadySeconds)
 		if err != nil {
 			return false, err
 		}
@@ -1945,10 +1996,10 @@ func waitForDeploymentStatus(c *client.Client, ns, deploymentName string, desire
 		if deployment.Status.Replicas == desiredUpdatedReplicas &&
 			deployment.Status.UpdatedReplicas == desiredUpdatedReplicas {
 			// Verify RCs.
-			if deploymentutil.GetReplicaCountForRCs(oldRCs) != 0 {
+			if deploymentutil.GetReplicaCountForReplicaSets(oldRSs) != 0 {
 				return false, fmt.Errorf("old RCs are not fully scaled down")
 			}
-			if deploymentutil.GetReplicaCountForRCs([]*api.ReplicationController{newRC}) != desiredUpdatedReplicas {
+			if deploymentutil.GetReplicaCountForReplicaSets([]*extensions.ReplicaSet{newRS}) != desiredUpdatedReplicas {
 				return false, fmt.Errorf("new RCs is not fully scaled up")
 			}
 			return true, nil

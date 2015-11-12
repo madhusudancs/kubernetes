@@ -355,7 +355,7 @@ func NewFactory(optionalClientConfig clientcmd.ClientConfig) *Factory {
 			case *api.ReplicationController:
 				return GetFirstPod(client, t.Namespace, t.Spec.Selector)
 			case *extensions.Deployment:
-				return GetFirstPod(client, t.Namespace, t.Spec.Selector)
+				return GetFirstPod(client, t.Namespace, t.Spec.Selector.MatchLabels)
 			case *extensions.Job:
 				return GetFirstPod(client, t.Namespace, t.Spec.Selector.MatchLabels)
 			case *api.Pod:

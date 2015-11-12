@@ -1580,24 +1580,24 @@ func (dd *DeploymentDescriber) Describe(namespace, name string) (string, error) 
 		fmt.Fprintf(out, "Namespace:\t%s\n", d.ObjectMeta.Namespace)
 		fmt.Fprintf(out, "CreationTimestamp:\t%s\n", d.CreationTimestamp.Time.Format(time.RFC1123Z))
 		fmt.Fprintf(out, "Labels:\t%s\n", labels.FormatLabels(d.Labels))
-		fmt.Fprintf(out, "Selector:\t%s\n", labels.FormatLabels(d.Spec.Selector))
+		fmt.Fprintf(out, "Selector:\t%s\n", d.Spec.Selector)
 		fmt.Fprintf(out, "Replicas:\t%d updated / %d total\n", d.Status.UpdatedReplicas, d.Spec.Replicas)
 		fmt.Fprintf(out, "StrategyType:\t%s\n", d.Spec.Strategy.Type)
 		if d.Spec.Strategy.RollingUpdate != nil {
 			ru := d.Spec.Strategy.RollingUpdate
 			fmt.Fprintf(out, "RollingUpdateStrategy:\t%s max unavailable, %s max surge, %d min ready seconds\n", ru.MaxUnavailable.String(), ru.MaxSurge.String(), ru.MinReadySeconds)
 		}
-		oldRCs, err := deploymentutil.GetOldRCs(*d, dd)
+		oldRSs, err := deploymentutil.GetOldReplicaSets(*d, dd)
 		if err == nil {
-			fmt.Fprintf(out, "OldReplicationControllers:\t%s\n", printReplicationControllersByLabels(oldRCs))
+			fmt.Fprintf(out, "OldReplicationControllers:\t%s\n", printReplicaSetsByLabels(oldRSs))
 		}
-		newRC, err := deploymentutil.GetNewRC(*d, dd)
+		newRS, err := deploymentutil.GetNewReplicaSet(*d, dd)
 		if err == nil {
-			var newRCs []*api.ReplicationController
-			if newRC != nil {
-				newRCs = append(newRCs, newRC)
+			var newRSs []*extensions.ReplicaSet
+			if newRS != nil {
+				newRSs = append(newRSs, newRS)
 			}
-			fmt.Fprintf(out, "NewReplicationController:\t%s\n", printReplicationControllersByLabels(newRCs))
+			fmt.Fprintf(out, "NewReplicationController:\t%s\n", printReplicaSetsByLabels(newRSs))
 		}
 		events, err := dd.Events(namespace).Search(d)
 		if err == nil && events != nil {
@@ -1666,6 +1666,20 @@ func printReplicationControllersByLabels(matchingRCs []*api.ReplicationControlle
 	}
 
 	list := strings.Join(rcStrings, ", ")
+	if list == "" {
+		return "<none>"
+	}
+	return list
+}
+
+func printReplicaSetsByLabels(matchingRSs []*extensions.ReplicaSet) string {
+	// Format the matching ReplicaSets into strings.
+	var rsStrings []string
+	for _, rs := range matchingRSs {
+		rsStrings = append(rsStrings, fmt.Sprintf("%s (%d/%d replicas created)", rs.Name, rs.Status.Replicas, rs.Spec.Replicas))
+	}
+
+	list := strings.Join(rsStrings, ", ")
 	if list == "" {
 		return "<none>"
 	}

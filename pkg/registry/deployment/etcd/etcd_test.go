@@ -47,7 +47,7 @@ func validNewDeployment() *extensions.Deployment {
 			Namespace: namespace,
 		},
 		Spec: extensions.DeploymentSpec{
-			Selector: map[string]string{"a": "b"},
+			Selector: &extensions.PodSelector{MatchLabels: map[string]string{"a": "b"}},
 			Template: api.PodTemplateSpec{
 				ObjectMeta: api.ObjectMeta{
 					Labels: map[string]string{"a": "b"},
@@ -83,7 +83,7 @@ func validNewScale() *extensions.Scale {
 		},
 		Status: extensions.ScaleStatus{
 			Replicas: validDeployment.Status.Replicas,
-			Selector: validDeployment.Spec.Template.Labels,
+			Selector: &extensions.PodSelector{MatchLabels: validDeployment.Spec.Template.Labels},
 		},
 	}
 }
@@ -102,7 +102,7 @@ func TestCreate(t *testing.T) {
 		// invalid (invalid selector)
 		&extensions.Deployment{
 			Spec: extensions.DeploymentSpec{
-				Selector: map[string]string{},
+				Selector: &extensions.PodSelector{MatchLabels: map[string]string{}},
 				Template: validDeployment.Spec.Template,
 			},
 		},
@@ -140,7 +140,7 @@ func TestUpdate(t *testing.T) {
 		},
 		func(obj runtime.Object) runtime.Object {
 			object := obj.(*extensions.Deployment)
-			object.Spec.Selector = map[string]string{}
+			object.Spec.Selector = &extensions.PodSelector{MatchLabels: map[string]string{}}
 			return object
 		},
 	)
@@ -237,9 +237,9 @@ func TestScaleUpdate(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	deployment := obj.(*extensions.Scale)
-	if deployment.Spec.Replicas != replicas {
-		t.Errorf("wrong replicas count expected: %d got: %d", replicas, deployment.Spec.Replicas)
+	scale := obj.(*extensions.Scale)
+	if scale.Spec.Replicas != replicas {
+		t.Errorf("wrong replicas count expected: %d got: %d", replicas, scale.Spec.Replicas)
 	}
 }
 

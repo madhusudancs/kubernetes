@@ -47,6 +47,7 @@ import (
 	persistentvolumecontroller "k8s.io/kubernetes/pkg/controller/persistentvolume"
 	"k8s.io/kubernetes/pkg/controller/podautoscaler"
 	"k8s.io/kubernetes/pkg/controller/podautoscaler/metrics"
+	replicaset "k8s.io/kubernetes/pkg/controller/replicaset"
 	replicationcontroller "k8s.io/kubernetes/pkg/controller/replication"
 	resourcequotacontroller "k8s.io/kubernetes/pkg/controller/resourcequota"
 	routecontroller "k8s.io/kubernetes/pkg/controller/route"
@@ -71,6 +72,7 @@ type CMServer struct {
 	CloudConfigFile                   string
 	ConcurrentEndpointSyncs           int
 	ConcurrentRCSyncs                 int
+	ConcurrentRSSyncs                 int
 	ConcurrentDSCSyncs                int
 	ConcurrentJobSyncs                int
 	ConcurrentResourceQuotaSyncs      int
@@ -114,6 +116,7 @@ func NewCMServer() *CMServer {
 		Address:                           net.ParseIP("127.0.0.1"),
 		ConcurrentEndpointSyncs:           5,
 		ConcurrentRCSyncs:                 5,
+		ConcurrentRSSyncs:                 5,
 		ConcurrentDSCSyncs:                2,
 		ConcurrentJobSyncs:                5,
 		ConcurrentResourceQuotaSyncs:      5,
@@ -190,6 +193,7 @@ func (s *CMServer) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&s.CloudConfigFile, "cloud-config", s.CloudConfigFile, "The path to the cloud provider configuration file.  Empty string for no configuration file.")
 	fs.IntVar(&s.ConcurrentEndpointSyncs, "concurrent-endpoint-syncs", s.ConcurrentEndpointSyncs, "The number of endpoint syncing operations that will be done concurrently. Larger number = faster endpoint updating, but more CPU (and network) load")
 	fs.IntVar(&s.ConcurrentRCSyncs, "concurrent_rc_syncs", s.ConcurrentRCSyncs, "The number of replication controllers that are allowed to sync concurrently. Larger number = more reponsive replica management, but more CPU (and network) load")
+	fs.IntVar(&s.ConcurrentRSSyncs, "concurrent_replicaset_syncs", s.ConcurrentRSSyncs, "The number of ReplicaSets that are allowed to sync concurrently. Larger number = more reponsive replica management, but more CPU (and network) load")
 	fs.IntVar(&s.ConcurrentResourceQuotaSyncs, "concurrent-resource-quota-syncs", s.ConcurrentResourceQuotaSyncs, "The number of resource quotas that are allowed to sync concurrently. Larger number = more responsive quota management, but more CPU (and network) load")
 	fs.IntVar(&s.ConcurrentDeploymentSyncs, "concurrent-deployment-syncs", s.ConcurrentDeploymentSyncs, "The number of deployment objects that are allowed to sync concurrently. Larger number = more reponsive deployments, but more CPU (and network) load")
 	fs.DurationVar(&s.ServiceSyncPeriod, "service-sync-period", s.ServiceSyncPeriod, "The period for syncing services with their external load balancers")
@@ -389,6 +393,13 @@ func (s *CMServer) Run(_ []string) error {
 			go deployment.NewDeploymentController(clientForUserAgentOrDie(*kubeconfig, "deployment-controller"), s.ResyncPeriod).
 				Run(s.ConcurrentDeploymentSyncs, util.NeverStop)
 		}
+
+		if containsResource(resources, "replicasets") {
+			glog.Infof("Starting ReplicaSet controller")
+			go replicaset.NewReplicaSetController(kubeClient, s.ResyncPeriod, replicaset.BurstReplicas).
+				Run(s.ConcurrentRSSyncs, util.NeverStop)
+		}
+
 	}
 
 	volumePlugins := ProbeRecyclableVolumePlugins(s.VolumeConfigFlags)

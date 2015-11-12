@@ -32,7 +32,7 @@ import (
 	"k8s.io/kubernetes/pkg/util/intstr"
 )
 
-func TestDeploymentController_reconcileNewRC(t *testing.T) {
+func TestDeploymentController_reconcileNewReplicaSet(t *testing.T) {
 	tests := []struct {
 		deploymentReplicas  int
 		maxSurge            intstr.IntOrString
@@ -85,16 +85,17 @@ func TestDeploymentController_reconcileNewRC(t *testing.T) {
 
 	for i, test := range tests {
 		t.Logf("executing scenario %d", i)
-		newRc := rc("foo-v2", test.newReplicas)
-		oldRc := rc("foo-v2", test.oldReplicas)
-		allRcs := []*api.ReplicationController{newRc, oldRc}
+		newRS := rs("foo-v2", test.newReplicas)
+		oldRS := rs("foo-v2", test.oldReplicas)
+		allRSs := []*exp.ReplicaSet{newRS, oldRS}
 		deployment := deployment("foo", test.deploymentReplicas, test.maxSurge, intstr.FromInt(0))
 		fake := &testclient.Fake{}
 		controller := &DeploymentController{
 			client:        fake,
+			expClient:     fake.Extensions(),
 			eventRecorder: &record.FakeRecorder{},
 		}
-		scaled, err := controller.reconcileNewRC(allRcs, newRc, deployment)
+		scaled, err := controller.reconcileNewReplicaSet(allRSs, newRS, deployment)
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 			continue
@@ -113,14 +114,14 @@ func TestDeploymentController_reconcileNewRC(t *testing.T) {
 			t.Errorf("expected 1 action during scale, got: %v", fake.Actions())
 			continue
 		}
-		updated := fake.Actions()[0].(testclient.UpdateAction).GetObject().(*api.ReplicationController)
+		updated := fake.Actions()[0].(testclient.UpdateAction).GetObject().(*exp.ReplicaSet)
 		if e, a := test.expectedNewReplicas, updated.Spec.Replicas; e != a {
 			t.Errorf("expected update to %d replicas, got %d", e, a)
 		}
 	}
 }
 
-func TestDeploymentController_reconcileOldRCs(t *testing.T) {
+func TestDeploymentController_reconcileOldReplicaSets(t *testing.T) {
 	tests := []struct {
 		deploymentReplicas  int
 		maxUnavailable      intstr.IntOrString
@@ -162,9 +163,9 @@ func TestDeploymentController_reconcileOldRCs(t *testing.T) {
 
 	for i, test := range tests {
 		t.Logf("executing scenario %d", i)
-		oldRc := rc("foo-v2", test.oldReplicas)
-		allRcs := []*api.ReplicationController{oldRc}
-		oldRcs := []*api.ReplicationController{oldRc}
+		oldRS := rs("foo-v2", test.oldReplicas)
+		allRSs := []*exp.ReplicaSet{oldRS}
+		oldRSs := []*exp.ReplicaSet{oldRS}
 		deployment := deployment("foo", test.deploymentReplicas, intstr.FromInt(0), test.maxUnavailable)
 		fake := &testclient.Fake{}
 		fake.AddReactor("list", "pods", func(action testclient.Action) (handled bool, ret runtime.Object, err error) {
@@ -174,7 +175,8 @@ func TestDeploymentController_reconcileOldRCs(t *testing.T) {
 				for podIndex := 0; podIndex < test.readyPods; podIndex++ {
 					podList.Items = append(podList.Items, api.Pod{
 						ObjectMeta: api.ObjectMeta{
-							Name: fmt.Sprintf("%s-pod-%d", oldRc.Name, podIndex),
+							Name:   fmt.Sprintf("%s-pod-%d", oldRS.Name, podIndex),
+							Labels: map[string]string{"foo": "bar"},
 						},
 						Status: api.PodStatus{
 							Conditions: []api.PodCondition{
@@ -192,9 +194,10 @@ func TestDeploymentController_reconcileOldRCs(t *testing.T) {
 		})
 		controller := &DeploymentController{
 			client:        fake,
+			expClient:     fake.Extensions(),
 			eventRecorder: &record.FakeRecorder{},
 		}
-		scaled, err := controller.reconcileOldRCs(allRcs, oldRcs, nil, deployment, false)
+		scaled, err := controller.reconcileOldReplicaSets(allRSs, oldRSs, nil, deployment, false)
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 			continue
@@ -226,20 +229,21 @@ func TestDeploymentController_reconcileOldRCs(t *testing.T) {
 			t.Errorf("expected an update action")
 			continue
 		}
-		updated := updateAction.GetObject().(*api.ReplicationController)
+		updated := updateAction.GetObject().(*exp.ReplicaSet)
 		if e, a := test.expectedOldReplicas, updated.Spec.Replicas; e != a {
 			t.Errorf("expected update to %d replicas, got %d", e, a)
 		}
 	}
 }
 
-func rc(name string, replicas int) *api.ReplicationController {
-	return &api.ReplicationController{
+func rs(name string, replicas int) *exp.ReplicaSet {
+	return &exp.ReplicaSet{
 		ObjectMeta: api.ObjectMeta{
 			Name: name,
 		},
-		Spec: api.ReplicationControllerSpec{
+		Spec: exp.ReplicaSetSpec{
 			Replicas: replicas,
+			Selector: &exp.PodSelector{MatchLabels: map[string]string{"foo": "bar"}},
 			Template: &api.PodTemplateSpec{},
 		},
 	}

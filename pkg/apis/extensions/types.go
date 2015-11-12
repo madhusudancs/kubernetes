@@ -46,7 +46,7 @@ type ScaleStatus struct {
 	Replicas int `json:"replicas"`
 
 	// label query over pods that should match the replicas count. More info: http://releases.k8s.io/HEAD/docs/user-guide/labels.md#label-selectors
-	Selector map[string]string `json:"selector,omitempty"`
+	Selector *LabelSelector `json:"selector,omitempty"`
 }
 
 // represents a scaling request for a resource.
@@ -207,9 +207,9 @@ type DeploymentSpec struct {
 	// zero and not specified. Defaults to 1.
 	Replicas int `json:"replicas,omitempty"`
 
-	// Label selector for pods. Existing ReplicationControllers whose pods are
+	// Label selector for pods. Existing ReplicaSets whose pods are
 	// selected by this will be the ones affected by this deployment.
-	Selector map[string]string `json:"selector,omitempty"`
+	Selector *LabelSelector `json:"selector,omitempty"`
 
 	// Template describes the pods that will be created.
 	Template api.PodTemplateSpec `json:"template"`
@@ -217,9 +217,9 @@ type DeploymentSpec struct {
 	// The deployment strategy to use to replace existing pods with new ones.
 	Strategy DeploymentStrategy `json:"strategy,omitempty"`
 
-	// Key of the selector that is added to existing RCs (and label key that is
-	// added to its pods) to prevent the existing RCs to select new pods (and old
-	// pods being selected by new RC).
+	// Key of the selector that is added to existing ReplicaSets (and label key that
+	// is added to its pods) to prevent the existing ReplicaSets to select new pods
+	// (and old pods being selected by new ReplicaSet).
 	// Users can set this to an empty string to indicate that the system should
 	// not add any selector and label. If unspecified, system uses
 	// DefaultDeploymentUniqueLabelKey("deployment.kubernetes.io/podTemplateHash").
@@ -762,7 +762,7 @@ type ReplicaSetSpec struct {
 	Replicas int `json:"replicas"`
 
 	// Selector is a label query over pods that should match the Replicas count.
-	Selector *PodSelector `json:"selector,omitempty"`
+	Selector *LabelSelector `json:"selector,omitempty"`
 
 	// TemplateRef is a reference to an object that describes the pod that will be created if
 	// insufficient replicas are detected. This reference is ignored if a Template is set.

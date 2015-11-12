@@ -53,7 +53,7 @@ func testNewDeployment(f *Framework) {
 		},
 		Spec: extensions.DeploymentSpec{
 			Replicas:       1,
-			Selector:       podLabels,
+			Selector:       &extensions.LabelSelector{MatchLabels: podLabels},
 			UniqueLabelKey: extensions.DefaultDeploymentUniqueLabelKey,
 			Template: api.PodTemplateSpec{
 				ObjectMeta: api.ObjectMeta{
@@ -76,8 +76,8 @@ func testNewDeployment(f *Framework) {
 		Expect(err).NotTo(HaveOccurred())
 		Logf("deleting deployment %s", deploymentName)
 		Expect(c.Deployments(ns).Delete(deploymentName, nil)).NotTo(HaveOccurred())
-		// TODO: remove this once we can delete rcs with deployment
-		newRC, err := deploymentutil.GetNewRC(*deployment, c)
+		// TODO: remove this once we can delete ReplicaSets with deployment
+		newRC, err := deploymentutil.GetNewReplicaSet(*deployment, c)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.ReplicationControllers(ns).Delete(newRC.Name)).NotTo(HaveOccurred())
 	}()
@@ -103,22 +103,22 @@ func testRollingUpdateDeployment(f *Framework) {
 	c := f.Client
 	// Create nginx pods.
 	deploymentPodLabels := map[string]string{"name": "sample-pod"}
-	rcPodLabels := map[string]string{
+	rsPodLabels := map[string]string{
 		"name": "sample-pod",
 		"pod":  "nginx",
 	}
 
-	rcName := "nginx-controller"
-	_, err := c.ReplicationControllers(ns).Create(&api.ReplicationController{
+	rsName := "nginx-replicaset"
+	_, err := c.ReplicaSets(ns).Create(&extensions.ReplicaSet{
 		ObjectMeta: api.ObjectMeta{
-			Name: rcName,
+			Name: rsName,
 		},
-		Spec: api.ReplicationControllerSpec{
+		Spec: extensions.ReplicaSetSpec{
 			Replicas: 3,
-			Selector: rcPodLabels,
+			Selector: &extensions.LabelSelector{MatchLabels: rsPodLabels},
 			Template: &api.PodTemplateSpec{
 				ObjectMeta: api.ObjectMeta{
-					Labels: rcPodLabels,
+					Labels: rsPodLabels,
 				},
 				Spec: api.PodSpec{
 					Containers: []api.Container{
@@ -133,8 +133,8 @@ func testRollingUpdateDeployment(f *Framework) {
 	})
 	Expect(err).NotTo(HaveOccurred())
 	defer func() {
-		Logf("deleting replication controller %s", rcName)
-		Expect(c.ReplicationControllers(ns).Delete(rcName)).NotTo(HaveOccurred())
+		Logf("deleting replication controller %s", rsName)
+		Expect(c.ReplicaSets(ns).Delete(rsName)).NotTo(HaveOccurred())
 	}()
 	// Verify that the required pods have come up.
 	err = verifyPods(c, ns, "sample-pod", false, 3)
@@ -152,7 +152,7 @@ func testRollingUpdateDeployment(f *Framework) {
 		},
 		Spec: extensions.DeploymentSpec{
 			Replicas:       3,
-			Selector:       deploymentPodLabels,
+			Selector:       &extensions.LabelSelector{MatchLabels: deploymentPodLabels},
 			UniqueLabelKey: extensions.DefaultDeploymentUniqueLabelKey,
 			Template: api.PodTemplateSpec{
 				ObjectMeta: api.ObjectMeta{
@@ -176,8 +176,8 @@ func testRollingUpdateDeployment(f *Framework) {
 		Expect(err).NotTo(HaveOccurred())
 		Logf("deleting deployment %s", deploymentName)
 		Expect(c.Deployments(ns).Delete(deploymentName, nil)).NotTo(HaveOccurred())
-		// TODO: remove this once we can delete rcs with deployment
-		newRC, err := deploymentutil.GetNewRC(*deployment, c)
+		// TODO: remove this once we can delete ReplicaSets with deployment
+		newRC, err := deploymentutil.GetNewReplicaSet(*deployment, c)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.ReplicationControllers(ns).Delete(newRC.Name)).NotTo(HaveOccurred())
 	}()
@@ -191,21 +191,21 @@ func testRollingUpdateDeploymentEvents(f *Framework) {
 	c := f.Client
 	// Create nginx pods.
 	deploymentPodLabels := map[string]string{"name": "sample-pod-2"}
-	rcPodLabels := map[string]string{
+	rsPodLabels := map[string]string{
 		"name": "sample-pod-2",
 		"pod":  "nginx",
 	}
-	rcName := "nginx-controller"
-	_, err := c.ReplicationControllers(ns).Create(&api.ReplicationController{
+	rsName := "nginx-replicaset"
+	_, err := c.ReplicaSets(ns).Create(&extensions.ReplicaSet{
 		ObjectMeta: api.ObjectMeta{
-			Name: rcName,
+			Name: rsName,
 		},
-		Spec: api.ReplicationControllerSpec{
+		Spec: extensions.ReplicaSetSpec{
 			Replicas: 1,
-			Selector: rcPodLabels,
+			Selector: &extensions.LabelSelector{MatchLabels: rsPodLabels},
 			Template: &api.PodTemplateSpec{
 				ObjectMeta: api.ObjectMeta{
-					Labels: rcPodLabels,
+					Labels: rsPodLabels,
 				},
 				Spec: api.PodSpec{
 					Containers: []api.Container{
@@ -220,8 +220,8 @@ func testRollingUpdateDeploymentEvents(f *Framework) {
 	})
 	Expect(err).NotTo(HaveOccurred())
 	defer func() {
-		Logf("deleting replication controller %s", rcName)
-		Expect(c.ReplicationControllers(ns).Delete(rcName)).NotTo(HaveOccurred())
+		Logf("deleting replication controller %s", rsName)
+		Expect(c.ReplicaSets(ns).Delete(rsName)).NotTo(HaveOccurred())
 	}()
 	// Verify that the required pods have come up.
 	err = verifyPods(c, ns, "sample-pod-2", false, 1)
@@ -239,7 +239,7 @@ func testRollingUpdateDeploymentEvents(f *Framework) {
 		},
 		Spec: extensions.DeploymentSpec{
 			Replicas:       1,
-			Selector:       deploymentPodLabels,
+			Selector:       &extensions.LabelSelector{MatchLabels: deploymentPodLabels},
 			UniqueLabelKey: extensions.DefaultDeploymentUniqueLabelKey,
 			Template: api.PodTemplateSpec{
 				ObjectMeta: api.ObjectMeta{
@@ -263,8 +263,8 @@ func testRollingUpdateDeploymentEvents(f *Framework) {
 		Expect(err).NotTo(HaveOccurred())
 		Logf("deleting deployment %s", deploymentName)
 		Expect(c.Deployments(ns).Delete(deploymentName, nil)).NotTo(HaveOccurred())
-		// TODO: remove this once we can delete rcs with deployment
-		newRC, err := deploymentutil.GetNewRC(*deployment, c)
+		// TODO: remove this once we can delete ReplicaSets with deployment
+		newRC, err := deploymentutil.GetNewReplicaSet(*deployment, c)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.ReplicationControllers(ns).Delete(newRC.Name)).NotTo(HaveOccurred())
 	}()
@@ -280,11 +280,12 @@ func testRollingUpdateDeploymentEvents(f *Framework) {
 		Logf("error in listing events: %s", err)
 		Expect(err).NotTo(HaveOccurred())
 	}
-	// There should be 2 events, one to scale up the new RC and then to scale down the old RC.
+	// There should be 2 events, one to scale up the new ReplicaSet and then to scale down
+	// the old ReplicaSet.
 	Expect(len(events.Items)).Should(Equal(2))
-	newRC, err := deploymentutil.GetNewRC(*deployment, c)
+	newRS, err := deploymentutil.GetNewReplicaSet(*deployment, c)
 	Expect(err).NotTo(HaveOccurred())
-	Expect(newRC).NotTo(Equal(nil))
-	Expect(events.Items[0].Message).Should(Equal(fmt.Sprintf("Scaled up rc %s to 1", newRC.Name)))
-	Expect(events.Items[1].Message).Should(Equal(fmt.Sprintf("Scaled down rc %s to 0", rcName)))
+	Expect(newRS).NotTo(Equal(nil))
+	Expect(events.Items[0].Message).Should(Equal(fmt.Sprintf("Scaled up ReplicaSet %s to 1", newRS.Name)))
+	Expect(events.Items[1].Message).Should(Equal(fmt.Sprintf("Scaled down ReplicaSet %s to 0", rsName)))
 }

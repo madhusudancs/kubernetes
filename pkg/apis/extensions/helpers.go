@@ -81,3 +81,19 @@ func ScaleFromDeployment(deployment *Deployment) *Scale {
 		},
 	}
 }
+
+// SetAsLabelSelector converts the labels.Set object into a LabelSelector api object.
+func SetAsLabelSelector(ls labels.Set) *LabelSelector {
+	if ls == nil {
+		return nil
+	}
+
+	selector := &LabelSelector{
+		MatchLabels: make(map[string]string),
+	}
+	for label, value := range ls {
+		selector.MatchLabels[label] = value
+	}
+
+	return selector
+}

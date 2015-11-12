@@ -264,6 +264,254 @@ func TestReplicationControllerStop(t *testing.T) {
 	}
 }
 
+func TestReplicaSetStop(t *testing.T) {
+	name := "foo"
+	ns := "default"
+	tests := []struct {
+		Name            string
+		Objs            []runtime.Object
+		StopError       error
+		ExpectedActions []string
+	}{
+		{
+			Name: "OnlyOneRS",
+			Objs: []runtime.Object{
+				&extensions.ReplicaSet{ // GET
+					ObjectMeta: api.ObjectMeta{
+						Name:      name,
+						Namespace: ns,
+					},
+					Spec: extensions.ReplicaSetSpec{
+						Replicas: 0,
+						Selector: &extensions.PodSelector{MatchLabels: map[string]string{"k1": "v1"}},
+					},
+				},
+				&extensions.ReplicaSetList{ // LIST
+					Items: []extensions.ReplicaSet{
+						{
+							ObjectMeta: api.ObjectMeta{
+								Name:      name,
+								Namespace: ns,
+							},
+							Spec: extensions.ReplicaSetSpec{
+								Replicas: 0,
+								Selector: &extensions.PodSelector{MatchLabels: map[string]string{"k1": "v1"}},
+							},
+						},
+					},
+				},
+			},
+			StopError:       nil,
+			ExpectedActions: []string{"get", "list", "get", "update", "get", "get", "delete"},
+		},
+		{
+			Name: "NoOverlapping",
+			Objs: []runtime.Object{
+				&extensions.ReplicaSet{ // GET
+					ObjectMeta: api.ObjectMeta{
+						Name:      name,
+						Namespace: ns,
+					},
+					Spec: extensions.ReplicaSetSpec{
+						Replicas: 0,
+						Selector: &extensions.PodSelector{MatchLabels: map[string]string{"k1": "v1"}},
+					},
+				},
+				&extensions.ReplicaSetList{ // LIST
+					Items: []extensions.ReplicaSet{
+						{
+							ObjectMeta: api.ObjectMeta{
+								Name:      "baz",
+								Namespace: ns,
+							},
+							Spec: extensions.ReplicaSetSpec{
+								Replicas: 0,
+								Selector: &extensions.PodSelector{MatchLabels: map[string]string{"k3": "v3"}},
+							},
+						},
+						{
+							ObjectMeta: api.ObjectMeta{
+								Name:      name,
+								Namespace: ns,
+							},
+							Spec: extensions.ReplicaSetSpec{
+								Replicas: 0,
+								Selector: &extensions.PodSelector{MatchLabels: map[string]string{"k1": "v1"}},
+							},
+						},
+					},
+				},
+			},
+			StopError:       nil,
+			ExpectedActions: []string{"get", "list", "get", "update", "get", "get", "delete"},
+		},
+		{
+			Name: "OverlappingError",
+			Objs: []runtime.Object{
+
+				&extensions.ReplicaSet{ // GET
+					ObjectMeta: api.ObjectMeta{
+						Name:      name,
+						Namespace: ns,
+					},
+					Spec: extensions.ReplicaSetSpec{
+						Replicas: 0,
+						Selector: &extensions.PodSelector{MatchLabels: map[string]string{"k1": "v1"}},
+					},
+				},
+				&extensions.ReplicaSetList{ // LIST
+					Items: []extensions.ReplicaSet{
+						{
+							ObjectMeta: api.ObjectMeta{
+								Name:      "baz",
+								Namespace: ns,
+							},
+							Spec: extensions.ReplicaSetSpec{
+								Replicas: 0,
+								Selector: &extensions.PodSelector{MatchLabels: map[string]string{"k1": "v1", "k2": "v2"}},
+							},
+						},
+						{
+							ObjectMeta: api.ObjectMeta{
+								Name:      name,
+								Namespace: ns,
+							},
+							Spec: extensions.ReplicaSetSpec{
+								Replicas: 0,
+								Selector: &extensions.PodSelector{MatchLabels: map[string]string{"k1": "v1"}},
+							},
+						},
+					},
+				},
+			},
+			StopError:       fmt.Errorf("Detected overlapping ReplicaSets for ReplicaSet foo: baz, please manage deletion individually with --cascade=false."),
+			ExpectedActions: []string{"get", "list"},
+		},
+
+		{
+			Name: "OverlappingButSafeDelete",
+			Objs: []runtime.Object{
+
+				&extensions.ReplicaSet{ // GET
+					ObjectMeta: api.ObjectMeta{
+						Name:      name,
+						Namespace: ns,
+					},
+					Spec: extensions.ReplicaSetSpec{
+						Replicas: 0,
+						Selector: &extensions.PodSelector{MatchLabels: map[string]string{"k1": "v1", "k2": "v2"}},
+					},
+				},
+				&extensions.ReplicaSetList{ // LIST
+					Items: []extensions.ReplicaSet{
+						{
+							ObjectMeta: api.ObjectMeta{
+								Name:      "baz",
+								Namespace: ns,
+							},
+							Spec: extensions.ReplicaSetSpec{
+								Replicas: 0,
+								Selector: &extensions.PodSelector{MatchLabels: map[string]string{"k1": "v1", "k2": "v2", "k3": "v3"}},
+							},
+						},
+						{
+							ObjectMeta: api.ObjectMeta{
+								Name:      "zaz",
+								Namespace: ns,
+							},
+							Spec: extensions.ReplicaSetSpec{
+								Replicas: 0,
+								Selector: &extensions.PodSelector{MatchLabels: map[string]string{"k1": "v1"}},
+							},
+						},
+						{
+							ObjectMeta: api.ObjectMeta{
+								Name:      name,
+								Namespace: ns,
+							},
+							Spec: extensions.ReplicaSetSpec{
+								Replicas: 0,
+								Selector: &extensions.PodSelector{MatchLabels: map[string]string{"k1": "v1", "k2": "v2"}},
+							},
+						},
+					},
+				},
+			},
+
+			StopError:       fmt.Errorf("Detected overlapping ReplicaSets for ReplicaSet foo: baz,zaz, please manage deletion individually with --cascade=false."),
+			ExpectedActions: []string{"get", "list"},
+		},
+
+		{
+			Name: "TwoExactMatchReplicaSets",
+			Objs: []runtime.Object{
+
+				&extensions.ReplicaSet{ // GET
+					ObjectMeta: api.ObjectMeta{
+						Name:      name,
+						Namespace: ns,
+					},
+					Spec: extensions.ReplicaSetSpec{
+						Replicas: 0,
+						Selector: &extensions.PodSelector{MatchLabels: map[string]string{"k1": "v1"}},
+					},
+				},
+				&extensions.ReplicaSetList{ // LIST
+					Items: []extensions.ReplicaSet{
+						{
+							ObjectMeta: api.ObjectMeta{
+								Name:      "zaz",
+								Namespace: ns,
+							},
+							Spec: extensions.ReplicaSetSpec{
+								Replicas: 0,
+								Selector: &extensions.PodSelector{MatchLabels: map[string]string{"k1": "v1"}},
+							},
+						},
+						{
+							ObjectMeta: api.ObjectMeta{
+								Name:      name,
+								Namespace: ns,
+							},
+							Spec: extensions.ReplicaSetSpec{
+								Replicas: 0,
+								Selector: &extensions.PodSelector{MatchLabels: map[string]string{"k1": "v1"}},
+							},
+						},
+					},
+				},
+			},
+
+			StopError:       nil,
+			ExpectedActions: []string{"get", "list", "delete"},
+		},
+	}
+
+	for _, test := range tests {
+		fake := testclient.NewSimpleFake(test.Objs...)
+		reaper := ReplicaSetReaper{fake, time.Millisecond, time.Millisecond}
+		err := reaper.Stop(ns, name, 0, nil)
+		if !reflect.DeepEqual(err, test.StopError) {
+			t.Errorf("%s unexpected error: %v", test.Name, err)
+			continue
+		}
+
+		actions := fake.Actions()
+		if len(actions) != len(test.ExpectedActions) {
+			t.Errorf("%s unexpected actions: %v, expected %d actions got %d", test.Name, actions, len(test.ExpectedActions), len(actions))
+			continue
+		}
+		for i, verb := range test.ExpectedActions {
+			if actions[i].GetResource() != "replicasets" {
+				t.Errorf("%s unexpected action: %+v, expected %s-replicaSet", test.Name, actions[i], verb)
+			}
+			if actions[i].GetVerb() != verb {
+				t.Errorf("%s unexpected action: %+v, expected %s-replicaSet", test.Name, actions[i], verb)
+			}
+		}
+	}
+}
+
 func TestJobStop(t *testing.T) {
 	name := "foo"
 	ns := "default"

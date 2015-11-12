@@ -72,7 +72,7 @@ var validScale = extensions.Scale{
 	},
 	Status: extensions.ScaleStatus{
 		Replicas: 0,
-		Selector: validPodTemplate.Template.Labels,
+		Selector: &extensions.PodSelector{MatchLabels: validPodTemplate.Template.Labels},
 	},
 }
 

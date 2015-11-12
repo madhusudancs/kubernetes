@@ -697,8 +697,10 @@ func validDeployment() *extensions.Deployment {
 			Namespace: api.NamespaceDefault,
 		},
 		Spec: extensions.DeploymentSpec{
-			Selector: map[string]string{
-				"name": "abc",
+			Selector: &extensions.PodSelector{
+				MatchLabels: map[string]string{
+					"name": "abc",
+				},
 			},
 			Template: api.PodTemplateSpec{
 				ObjectMeta: api.ObjectMeta{
@@ -743,8 +745,10 @@ func TestValidateDeployment(t *testing.T) {
 	}
 	// selector should match the labels in pod template.
 	invalidSelectorDeployment := validDeployment()
-	invalidSelectorDeployment.Spec.Selector = map[string]string{
-		"name": "def",
+	invalidSelectorDeployment.Spec.Selector = &extensions.PodSelector{
+		MatchLabels: map[string]string{
+			"name": "def",
+		},
 	}
 	errorCases["`selector` does not match template `labels`"] = invalidSelectorDeployment
 
