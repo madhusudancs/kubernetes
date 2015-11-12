@@ -624,6 +624,92 @@ func ValidateConfigMapUpdate(newCfg, oldCfg *extensions.ConfigMap) field.ErrorLi
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newCfg.ObjectMeta, &oldCfg.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateConfigMap(newCfg)...)
+	return allErrs
+}
 
+// ValidateReplicaSetName can be used to check whether the given ReplicaSet
+// name is valid.
+// Prefix indicates this name will be used as part of generation, in which case
+// trailing dashes are allowed.
+func ValidateReplicaSetName(name string, prefix bool) (bool, string) {
+	return apivalidation.NameIsDNSSubdomain(name, prefix)
+}
+
+// ValidateReplicaSet tests if required fields in the ReplicaSet are set.
+func ValidateReplicaSet(rs *extensions.ReplicaSet) errs.ValidationErrorList {
+	allErrs := errs.ValidationErrorList{}
+	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&rs.ObjectMeta, true, ValidateReplicaSetName).Prefix("metadata")...)
+	allErrs = append(allErrs, ValidateReplicaSetSpec(&rs.Spec).Prefix("spec")...)
+	return allErrs
+}
+
+// ValidateReplicaSetUpdate tests if required fields in the ReplicaSet are set.
+func ValidateReplicaSetUpdate(rs, oldRs *extensions.ReplicaSet) errs.ValidationErrorList {
+	allErrs := errs.ValidationErrorList{}
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&rs.ObjectMeta, &oldRs.ObjectMeta).Prefix("metadata")...)
+	allErrs = append(allErrs, ValidateReplicaSetSpec(&rs.Spec).Prefix("spec")...)
+	return allErrs
+}
+
+// ValidateReplicaSetStatusUpdate tests if required fields in the ReplicaSet are set.
+func ValidateReplicaSetStatusUpdate(rs, oldRs *extensions.ReplicaSet) errs.ValidationErrorList {
+	allErrs := errs.ValidationErrorList{}
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&rs.ObjectMeta, &oldRs.ObjectMeta).Prefix("metadata")...)
+	allErrs = append(allErrs, apivalidation.ValidatePositiveField(int64(rs.Status.Replicas), "status.replicas")...)
+	allErrs = append(allErrs, apivalidation.ValidatePositiveField(int64(rs.Status.ObservedGeneration), "status.observedGeneration")...)
+	return allErrs
+}
+
+// Validates that given value is not negative.
+func ValidatePositiveField(value int64, fieldName string) errs.ValidationErrorList {
+	allErrs := errs.ValidationErrorList{}
+	if value < 0 {
+		allErrs = append(allErrs, errs.NewFieldInvalid(fieldName, value, `must be non-negative`))
+	}
+	return allErrs
+}
+
+// ValidateReplicaSetSpec tests if required fields in the ReplicaSet spec are set.
+func ValidateReplicaSetSpec(spec *extensions.ReplicaSetSpec) errs.ValidationErrorList {
+	allErrs := errs.ValidationErrorList{}
+
+	allErrs = append(allErrs, ValidatePositiveField(int64(spec.Replicas), "replicas")...)
+
+	if spec.Selector == nil {
+		allErrs = append(allErrs, errs.NewFieldRequired("selector"))
+	} else {
+		allErrs = append(allErrs, ValidatePodSelector(spec.Selector).Prefix("selector")...)
+	}
+
+	selector, err := extensions.PodSelectorAsSelector(spec.Selector)
+	if err != nil {
+		allErrs = append(allErrs, errs.NewFieldInvalid("selector", spec.Selector, "pod selector is not a valid label selector"))
+	}
+	allErrs = append(allErrs, ValidatePodTemplateSpecForReplicaSet(spec.Template, selector, spec.Replicas, "template")...)
+	return allErrs
+}
+
+// Validates the given template and ensures that it is in accordance with the desired selector and replicas.
+func ValidatePodTemplateSpecForReplicaSet(template *api.PodTemplateSpec, selector labels.Selector, replicas int, fieldName string) errs.ValidationErrorList {
+	allErrs := errs.ValidationErrorList{}
+	if template == nil {
+		allErrs = append(allErrs, errs.NewFieldRequired(fieldName))
+	} else {
+		if !selector.Empty() {
+			// Verify that the ReplicaSet selector matches the labels in template.
+			labels := labels.Set(template.Labels)
+			if !selector.Matches(labels) {
+				allErrs = append(allErrs, errs.NewFieldInvalid(fieldName+".metadata.labels", template.Labels, "selector does not match labels in "+fieldName))
+			}
+		}
+		allErrs = append(allErrs, apivalidation.ValidatePodTemplateSpec(template).Prefix(fieldName)...)
+		if replicas > 1 {
+			allErrs = append(allErrs, apivalidation.ValidateReadOnlyPersistentDisks(template.Spec.Volumes).Prefix(fieldName+".spec.volumes")...)
+		}
+		// RestartPolicy has already been first-order validated as per ValidatePodTemplateSpec().
+		if template.Spec.RestartPolicy != api.RestartPolicyAlways {
+			allErrs = append(allErrs, errs.NewFieldValueNotSupported(fieldName+".spec.restartPolicy", template.Spec.RestartPolicy, []string{string(api.RestartPolicyAlways)}))
+		}
+	}
 	return allErrs
 }

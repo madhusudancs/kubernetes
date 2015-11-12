@@ -67,6 +67,8 @@ func addKnownTypes() {
 		&api.ListOptions{},
 		&ConfigMap{},
 		&ConfigMapList{},
+		&ReplicaSet{},
+		&ReplicaSetList{},
 		&api.ExportOptions{},
 	)
 }
@@ -91,3 +93,5 @@ func (obj *Ingress) GetObjectKind() unversioned.ObjectKind                     {
 func (obj *IngressList) GetObjectKind() unversioned.ObjectKind                 { return &obj.TypeMeta }
 func (obj *ConfigMap) GetObjectKind() unversioned.ObjectKind                   { return &obj.TypeMeta }
 func (obj *ConfigMapList) GetObjectKind() unversioned.ObjectKind               { return &obj.TypeMeta }
+func (*ReplicaSet) IsAnAPIObject()                                             { return &obj.TypeMeta }
+func (*ReplicaSetList) IsAnAPIObject()                                         { return &obj.TypeMeta }

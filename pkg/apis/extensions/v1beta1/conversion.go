@@ -37,6 +37,8 @@ func addConversionFuncs() {
 		convert_v1beta1_DeploymentStrategy_To_extensions_DeploymentStrategy,
 		convert_extensions_RollingUpdateDeployment_To_v1beta1_RollingUpdateDeployment,
 		convert_v1beta1_RollingUpdateDeployment_To_extensions_RollingUpdateDeployment,
+		convert_extensions_ReplicaSetSpec_To_v1beta1_ReplicaSetSpec,
+		convert_v1beta1_ReplicaSetSpec_To_extensions_ReplicaSetSpec,
 	)
 	if err != nil {
 		// If one of the conversion functions is malformed, detect it immediately.
@@ -383,6 +385,55 @@ func convert_v1_PodSecurityContext_To_api_PodSecurityContext(in *v1.PodSecurityC
 		*out.FSGroup = *in.FSGroup
 	} else {
 		out.FSGroup = nil
+	}
+	return nil
+}
+
+func convert_extensions_ReplicaSetSpec_To_v1beta1_ReplicaSetSpec(in *extensions.ReplicaSetSpec, out *ReplicaSetSpec, s conversion.Scope) error {
+	if defaulting, found := s.DefaultingInterface(reflect.TypeOf(*in)); found {
+		defaulting.(func(*extensions.ReplicaSetSpec))(in)
+	}
+	out.Replicas = new(int)
+	*out.Replicas = in.Replicas
+	if in.Selector != nil {
+		out.Selector = new(PodSelector)
+		if err := convert_extensions_PodSelector_To_v1beta1_PodSelector(in.Selector, out.Selector, s); err != nil {
+			return err
+		}
+	} else {
+		out.Selector = nil
+	}
+	if in.Template != nil {
+		out.Template = new(v1.PodTemplateSpec)
+		if err := convert_api_PodTemplateSpec_To_v1_PodTemplateSpec(in.Template, out.Template, s); err != nil {
+			return err
+		}
+	} else {
+		out.Template = nil
+	}
+	return nil
+}
+
+func convert_v1beta1_ReplicaSetSpec_To_extensions_ReplicaSetSpec(in *ReplicaSetSpec, out *extensions.ReplicaSetSpec, s conversion.Scope) error {
+	if defaulting, found := s.DefaultingInterface(reflect.TypeOf(*in)); found {
+		defaulting.(func(*ReplicaSetSpec))(in)
+	}
+	out.Replicas = *in.Replicas
+	if in.Selector != nil {
+		out.Selector = new(extensions.PodSelector)
+		if err := convert_v1beta1_PodSelector_To_extensions_PodSelector(in.Selector, out.Selector, s); err != nil {
+			return err
+		}
+	} else {
+		out.Selector = nil
+	}
+	if in.Template != nil {
+		out.Template = new(api.PodTemplateSpec)
+		if err := convert_v1_PodTemplateSpec_To_api_PodTemplateSpec(in.Template, out.Template, s); err != nil {
+			return err
+		}
+	} else {
+		out.Template = nil
 	}
 	return nil
 }

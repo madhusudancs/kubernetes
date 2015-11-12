@@ -175,7 +175,7 @@ type ThirdPartyResourceData struct {
 	Data []byte `json:"data,omitempty"`
 }
 
-// Deployment enables declarative updates for Pods and ReplicationControllers.
+// Deployment enables declarative updates for Pods and ReplicationSets.
 type Deployment struct {
 	unversioned.TypeMeta `json:",inline"`
 	// Standard object metadata.
@@ -194,7 +194,7 @@ type DeploymentSpec struct {
 	// zero and not specified. Defaults to 1.
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	// Label selector for pods. Existing ReplicationControllers whose pods are
+	// Label selector for pods. Existing ReplicaSets whose pods are
 	// selected by this will be the ones affected by this deployment.
 	Selector map[string]string `json:"selector,omitempty"`
 
@@ -756,4 +756,74 @@ type ConfigMapList struct {
 
 	// Items is the list of ConfigMaps.
 	Items []ConfigMap `json:"items,omitempty"`
+}
+
+// ReplicaSet represents the configuration of a ReplicaSet.
+type ReplicaSet struct {
+	unversioned.TypeMeta `json:",inline"`
+
+	// If the Labels of a ReplicaSet are empty, they are defaulted to
+	// be the same as the Pod(s) that the ReplicaSet manages.
+	// Standard object's metadata. More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#metadata
+	v1.ObjectMeta `json:"metadata,omitempty"`
+
+	// Spec defines the specification of the desired behavior of the ReplicaSet.
+	// More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#spec-and-status
+	Spec ReplicaSetSpec `json:"spec,omitempty"`
+
+	// Status is the most recently observed status of the ReplicaSet.
+	// This data may be out of date by some window of time.
+	// Populated by the system.
+	// Read-only.
+	// More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#spec-and-status
+	Status ReplicaSetStatus `json:"status,omitempty"`
+}
+
+// ReplicaSetList is a collection of ReplicaSets.
+type ReplicaSetList struct {
+	unversioned.TypeMeta `json:",inline"`
+	// Standard list metadata.
+	// More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#types-kinds
+	unversioned.ListMeta `json:"metadata,omitempty"`
+
+	// List of ReplicaSets.
+	// More info: http://releases.k8s.io/HEAD/docs/user-guide/replication-controller.md
+	Items []ReplicaSet `json:"items"`
+}
+
+// ReplicaSetSpec is the specification of a ReplicaSet.
+type ReplicaSetSpec struct {
+	// Replicas is the number of desired replicas.
+	// This is a pointer to distinguish between explicit zero and unspecified.
+	// Defaults to 1.
+	// More info: http://releases.k8s.io/HEAD/docs/user-guide/replication-controller.md#what-is-a-replication-controller
+	Replicas *int `json:"replicas,omitempty"`
+
+	// Selector is a label query over pods that should match the Replicas count.
+	// If Selector is empty, it is defaulted to the labels present on the Pod template.
+	// Label keys and values that must match in order to be controlled by this replication
+	// controller, if empty defaulted to labels on Pod template.
+	// More info: http://releases.k8s.io/HEAD/docs/user-guide/labels.md#label-selectors
+	Selector *PodSelector `json:"selector,omitempty"`
+
+	// TemplateRef is a reference to an object that describes the pod that will be created if
+	// insufficient replicas are detected.
+	// Reference to an object that describes the pod that will be created if insufficient replicas are detected.
+	// TemplateRef *ObjectReference `json:"templateRef,omitempty"`
+
+	// Template is the object that describes the pod that will be created if
+	// insufficient replicas are detected. This takes precedence over a TemplateRef.
+	// More info: http://releases.k8s.io/HEAD/docs/user-guide/replication-controller.md#pod-template
+	Template *v1.PodTemplateSpec `json:"template,omitempty"`
+}
+
+// ReplicaSetStatus represents the current status of a replication
+// controller.
+type ReplicaSetStatus struct {
+	// Replicas is the most recently oberved number of replicas.
+	// More info: http://releases.k8s.io/HEAD/docs/user-guide/replication-controller.md#what-is-a-replication-controller
+	Replicas int `json:"replicas"`
+
+	// ObservedGeneration reflects the generation of the most recently observed ReplicaSet.
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
