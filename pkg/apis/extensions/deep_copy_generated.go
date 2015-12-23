@@ -1085,9 +1085,9 @@ func deepCopy_extensions_DeploymentList(in DeploymentList, out *DeploymentList, 
 func deepCopy_extensions_DeploymentSpec(in DeploymentSpec, out *DeploymentSpec, c *conversion.Cloner) error {
 	out.Replicas = in.Replicas
 	if in.Selector != nil {
-		out.Selector = make(map[string]string)
-		for key, val := range in.Selector {
-			out.Selector[key] = val
+		out.Selector = new(LabelSelector)
+		if err := deepCopy_extensions_LabelSelector(*in.Selector, out.Selector, c); err != nil {
+			return err
 		}
 	} else {
 		out.Selector = nil
@@ -1478,6 +1478,69 @@ func deepCopy_extensions_NodeUtilization(in NodeUtilization, out *NodeUtilizatio
 	return nil
 }
 
+func deepCopy_extensions_ReplicaSet(in ReplicaSet, out *ReplicaSet, c *conversion.Cloner) error {
+	if err := deepCopy_unversioned_TypeMeta(in.TypeMeta, &out.TypeMeta, c); err != nil {
+		return err
+	}
+	if err := deepCopy_api_ObjectMeta(in.ObjectMeta, &out.ObjectMeta, c); err != nil {
+		return err
+	}
+	if err := deepCopy_extensions_ReplicaSetSpec(in.Spec, &out.Spec, c); err != nil {
+		return err
+	}
+	if err := deepCopy_extensions_ReplicaSetStatus(in.Status, &out.Status, c); err != nil {
+		return err
+	}
+	return nil
+}
+
+func deepCopy_extensions_ReplicaSetList(in ReplicaSetList, out *ReplicaSetList, c *conversion.Cloner) error {
+	if err := deepCopy_unversioned_TypeMeta(in.TypeMeta, &out.TypeMeta, c); err != nil {
+		return err
+	}
+	if err := deepCopy_unversioned_ListMeta(in.ListMeta, &out.ListMeta, c); err != nil {
+		return err
+	}
+	if in.Items != nil {
+		out.Items = make([]ReplicaSet, len(in.Items))
+		for i := range in.Items {
+			if err := deepCopy_extensions_ReplicaSet(in.Items[i], &out.Items[i], c); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
+	return nil
+}
+
+func deepCopy_extensions_ReplicaSetSpec(in ReplicaSetSpec, out *ReplicaSetSpec, c *conversion.Cloner) error {
+	out.Replicas = in.Replicas
+	if in.Selector != nil {
+		out.Selector = new(LabelSelector)
+		if err := deepCopy_extensions_LabelSelector(*in.Selector, out.Selector, c); err != nil {
+			return err
+		}
+	} else {
+		out.Selector = nil
+	}
+	if in.Template != nil {
+		out.Template = new(api.PodTemplateSpec)
+		if err := deepCopy_api_PodTemplateSpec(*in.Template, out.Template, c); err != nil {
+			return err
+		}
+	} else {
+		out.Template = nil
+	}
+	return nil
+}
+
+func deepCopy_extensions_ReplicaSetStatus(in ReplicaSetStatus, out *ReplicaSetStatus, c *conversion.Cloner) error {
+	out.Replicas = in.Replicas
+	out.ObservedGeneration = in.ObservedGeneration
+	return nil
+}
+
 func deepCopy_extensions_ReplicationControllerDummy(in ReplicationControllerDummy, out *ReplicationControllerDummy, c *conversion.Cloner) error {
 	if err := deepCopy_unversioned_TypeMeta(in.TypeMeta, &out.TypeMeta, c); err != nil {
 		return err
@@ -1520,9 +1583,9 @@ func deepCopy_extensions_ScaleSpec(in ScaleSpec, out *ScaleSpec, c *conversion.C
 func deepCopy_extensions_ScaleStatus(in ScaleStatus, out *ScaleStatus, c *conversion.Cloner) error {
 	out.Replicas = in.Replicas
 	if in.Selector != nil {
-		out.Selector = make(map[string]string)
-		for key, val := range in.Selector {
-			out.Selector[key] = val
+		out.Selector = new(LabelSelector)
+		if err := deepCopy_extensions_LabelSelector(*in.Selector, out.Selector, c); err != nil {
+			return err
 		}
 	} else {
 		out.Selector = nil
@@ -1709,6 +1772,10 @@ func init() {
 		deepCopy_extensions_LabelSelector,
 		deepCopy_extensions_LabelSelectorRequirement,
 		deepCopy_extensions_NodeUtilization,
+		deepCopy_extensions_ReplicaSet,
+		deepCopy_extensions_ReplicaSetList,
+		deepCopy_extensions_ReplicaSetSpec,
+		deepCopy_extensions_ReplicaSetStatus,
 		deepCopy_extensions_ReplicationControllerDummy,
 		deepCopy_extensions_RollingUpdateDeployment,
 		deepCopy_extensions_Scale,

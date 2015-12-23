@@ -137,7 +137,7 @@ func (DaemonSetStatus) SwaggerDoc() map[string]string {
 }
 
 var map_Deployment = map[string]string{
-	"":         "Deployment enables declarative updates for Pods and ReplicationControllers.",
+	"":         "Deployment enables declarative updates for Pods and ReplicationSets.",
 	"metadata": "Standard object metadata.",
 	"spec":     "Specification of the desired behavior of the Deployment.",
 	"status":   "Most recently observed status of the Deployment.",
@@ -160,7 +160,7 @@ func (DeploymentList) SwaggerDoc() map[string]string {
 var map_DeploymentSpec = map[string]string{
 	"":               "DeploymentSpec is the specification of the desired behavior of the Deployment.",
 	"replicas":       "Number of desired pods. This is a pointer to distinguish between explicit zero and not specified. Defaults to 1.",
-	"selector":       "Label selector for pods. Existing ReplicationControllers whose pods are selected by this will be the ones affected by this deployment.",
+	"selector":       "Label selector for pods. Existing ReplicaSets whose pods are selected by this will be the ones affected by this deployment.",
 	"template":       "Template describes the pods that will be created.",
 	"strategy":       "The deployment strategy to use to replace existing pods with new ones.",
 	"uniqueLabelKey": "Key of the selector that is added to existing RCs (and label key that is added to its pods) to prevent the existing RCs to select new pods (and old pods being selected by new RC). Users can set this to an empty string to indicate that the system should not add any selector and label. If unspecified, system uses DefaultDeploymentUniqueLabelKey(\"deployment.kubernetes.io/podTemplateHash\"). Value of this key is hash of DeploymentSpec.PodTemplateSpec. No label is added if this is set to empty string.",
@@ -435,6 +435,48 @@ var map_NodeUtilization = map[string]string{
 
 func (NodeUtilization) SwaggerDoc() map[string]string {
 	return map_NodeUtilization
+}
+
+var map_ReplicaSet = map[string]string{
+	"":         "ReplicaSet represents the configuration of a ReplicaSet.",
+	"metadata": "If the Labels of a ReplicaSet are empty, they are defaulted to be the same as the Pod(s) that the ReplicaSet manages. Standard object's metadata. More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#metadata",
+	"spec":     "Spec defines the specification of the desired behavior of the ReplicaSet. More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#spec-and-status",
+	"status":   "Status is the most recently observed status of the ReplicaSet. This data may be out of date by some window of time. Populated by the system. Read-only. More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#spec-and-status",
+}
+
+func (ReplicaSet) SwaggerDoc() map[string]string {
+	return map_ReplicaSet
+}
+
+var map_ReplicaSetList = map[string]string{
+	"":         "ReplicaSetList is a collection of ReplicaSets.",
+	"metadata": "Standard list metadata. More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#types-kinds",
+	"items":    "List of ReplicaSets. More info: http://releases.k8s.io/HEAD/docs/user-guide/replication-controller.md",
+}
+
+func (ReplicaSetList) SwaggerDoc() map[string]string {
+	return map_ReplicaSetList
+}
+
+var map_ReplicaSetSpec = map[string]string{
+	"":         "ReplicaSetSpec is the specification of a ReplicaSet.",
+	"replicas": "Replicas is the number of desired replicas. This is a pointer to distinguish between explicit zero and unspecified. Defaults to 1. More info: http://releases.k8s.io/HEAD/docs/user-guide/replication-controller.md#what-is-a-replication-controller",
+	"selector": "Selector is a label query over pods that should match the Replicas count. If Selector is empty, it is defaulted to the labels present on the Pod template. Label keys and values that must match in order to be controlled by this replication controller, if empty defaulted to labels on Pod template. More info: http://releases.k8s.io/HEAD/docs/user-guide/labels.md#label-selectors",
+	"template": "Template is the object that describes the pod that will be created if insufficient replicas are detected. This takes precedence over a TemplateRef. More info: http://releases.k8s.io/HEAD/docs/user-guide/replication-controller.md#pod-template",
+}
+
+func (ReplicaSetSpec) SwaggerDoc() map[string]string {
+	return map_ReplicaSetSpec
+}
+
+var map_ReplicaSetStatus = map[string]string{
+	"":                   "ReplicaSetStatus represents the current status of a replication controller.",
+	"replicas":           "Replicas is the most recently oberved number of replicas. More info: http://releases.k8s.io/HEAD/docs/user-guide/replication-controller.md#what-is-a-replication-controller",
+	"observedGeneration": "ObservedGeneration reflects the generation of the most recently observed ReplicaSet.",
+}
+
+func (ReplicaSetStatus) SwaggerDoc() map[string]string {
+	return map_ReplicaSetStatus
 }
 
 var map_ReplicationControllerDummy = map[string]string{

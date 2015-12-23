@@ -2478,9 +2478,9 @@ func autoconvert_extensions_DeploymentSpec_To_v1beta1_DeploymentSpec(in *extensi
 		return err
 	}
 	if in.Selector != nil {
-		out.Selector = make(map[string]string)
-		for key, val := range in.Selector {
-			out.Selector[key] = val
+		out.Selector = new(LabelSelector)
+		if err := convert_extensions_LabelSelector_To_v1beta1_LabelSelector(in.Selector, out.Selector, s); err != nil {
+			return err
 		}
 	} else {
 		out.Selector = nil
@@ -3027,6 +3027,95 @@ func convert_extensions_NodeUtilization_To_v1beta1_NodeUtilization(in *extension
 	return autoconvert_extensions_NodeUtilization_To_v1beta1_NodeUtilization(in, out, s)
 }
 
+func autoconvert_extensions_ReplicaSet_To_v1beta1_ReplicaSet(in *extensions.ReplicaSet, out *ReplicaSet, s conversion.Scope) error {
+	if defaulting, found := s.DefaultingInterface(reflect.TypeOf(*in)); found {
+		defaulting.(func(*extensions.ReplicaSet))(in)
+	}
+	if err := s.Convert(&in.TypeMeta, &out.TypeMeta, 0); err != nil {
+		return err
+	}
+	if err := convert_api_ObjectMeta_To_v1_ObjectMeta(&in.ObjectMeta, &out.ObjectMeta, s); err != nil {
+		return err
+	}
+	if err := convert_extensions_ReplicaSetSpec_To_v1beta1_ReplicaSetSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	if err := convert_extensions_ReplicaSetStatus_To_v1beta1_ReplicaSetStatus(&in.Status, &out.Status, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+func convert_extensions_ReplicaSet_To_v1beta1_ReplicaSet(in *extensions.ReplicaSet, out *ReplicaSet, s conversion.Scope) error {
+	return autoconvert_extensions_ReplicaSet_To_v1beta1_ReplicaSet(in, out, s)
+}
+
+func autoconvert_extensions_ReplicaSetList_To_v1beta1_ReplicaSetList(in *extensions.ReplicaSetList, out *ReplicaSetList, s conversion.Scope) error {
+	if defaulting, found := s.DefaultingInterface(reflect.TypeOf(*in)); found {
+		defaulting.(func(*extensions.ReplicaSetList))(in)
+	}
+	if err := s.Convert(&in.TypeMeta, &out.TypeMeta, 0); err != nil {
+		return err
+	}
+	if err := s.Convert(&in.ListMeta, &out.ListMeta, 0); err != nil {
+		return err
+	}
+	if in.Items != nil {
+		out.Items = make([]ReplicaSet, len(in.Items))
+		for i := range in.Items {
+			if err := convert_extensions_ReplicaSet_To_v1beta1_ReplicaSet(&in.Items[i], &out.Items[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
+	return nil
+}
+
+func convert_extensions_ReplicaSetList_To_v1beta1_ReplicaSetList(in *extensions.ReplicaSetList, out *ReplicaSetList, s conversion.Scope) error {
+	return autoconvert_extensions_ReplicaSetList_To_v1beta1_ReplicaSetList(in, out, s)
+}
+
+func autoconvert_extensions_ReplicaSetSpec_To_v1beta1_ReplicaSetSpec(in *extensions.ReplicaSetSpec, out *ReplicaSetSpec, s conversion.Scope) error {
+	if defaulting, found := s.DefaultingInterface(reflect.TypeOf(*in)); found {
+		defaulting.(func(*extensions.ReplicaSetSpec))(in)
+	}
+	if err := s.Convert(&in.Replicas, &out.Replicas, 0); err != nil {
+		return err
+	}
+	if in.Selector != nil {
+		out.Selector = new(LabelSelector)
+		if err := convert_extensions_LabelSelector_To_v1beta1_LabelSelector(in.Selector, out.Selector, s); err != nil {
+			return err
+		}
+	} else {
+		out.Selector = nil
+	}
+	if in.Template != nil {
+		out.Template = new(v1.PodTemplateSpec)
+		if err := convert_api_PodTemplateSpec_To_v1_PodTemplateSpec(in.Template, out.Template, s); err != nil {
+			return err
+		}
+	} else {
+		out.Template = nil
+	}
+	return nil
+}
+
+func autoconvert_extensions_ReplicaSetStatus_To_v1beta1_ReplicaSetStatus(in *extensions.ReplicaSetStatus, out *ReplicaSetStatus, s conversion.Scope) error {
+	if defaulting, found := s.DefaultingInterface(reflect.TypeOf(*in)); found {
+		defaulting.(func(*extensions.ReplicaSetStatus))(in)
+	}
+	out.Replicas = in.Replicas
+	out.ObservedGeneration = in.ObservedGeneration
+	return nil
+}
+
+func convert_extensions_ReplicaSetStatus_To_v1beta1_ReplicaSetStatus(in *extensions.ReplicaSetStatus, out *ReplicaSetStatus, s conversion.Scope) error {
+	return autoconvert_extensions_ReplicaSetStatus_To_v1beta1_ReplicaSetStatus(in, out, s)
+}
+
 func autoconvert_extensions_ReplicationControllerDummy_To_v1beta1_ReplicationControllerDummy(in *extensions.ReplicationControllerDummy, out *ReplicationControllerDummy, s conversion.Scope) error {
 	if defaulting, found := s.DefaultingInterface(reflect.TypeOf(*in)); found {
 		defaulting.(func(*extensions.ReplicationControllerDummy))(in)
@@ -3096,9 +3185,9 @@ func autoconvert_extensions_ScaleStatus_To_v1beta1_ScaleStatus(in *extensions.Sc
 	}
 	out.Replicas = int32(in.Replicas)
 	if in.Selector != nil {
-		out.Selector = make(map[string]string)
-		for key, val := range in.Selector {
-			out.Selector[key] = val
+		out.Selector = new(LabelSelector)
+		if err := convert_extensions_LabelSelector_To_v1beta1_LabelSelector(in.Selector, out.Selector, s); err != nil {
+			return err
 		}
 	} else {
 		out.Selector = nil
@@ -3521,9 +3610,9 @@ func autoconvert_v1beta1_DeploymentSpec_To_extensions_DeploymentSpec(in *Deploym
 	}
 	// in.Replicas has no peer in out
 	if in.Selector != nil {
-		out.Selector = make(map[string]string)
-		for key, val := range in.Selector {
-			out.Selector[key] = val
+		out.Selector = new(extensions.LabelSelector)
+		if err := convert_v1beta1_LabelSelector_To_extensions_LabelSelector(in.Selector, out.Selector, s); err != nil {
+			return err
 		}
 	} else {
 		out.Selector = nil
@@ -4080,6 +4169,93 @@ func convert_v1beta1_NodeUtilization_To_extensions_NodeUtilization(in *NodeUtili
 	return autoconvert_v1beta1_NodeUtilization_To_extensions_NodeUtilization(in, out, s)
 }
 
+func autoconvert_v1beta1_ReplicaSet_To_extensions_ReplicaSet(in *ReplicaSet, out *extensions.ReplicaSet, s conversion.Scope) error {
+	if defaulting, found := s.DefaultingInterface(reflect.TypeOf(*in)); found {
+		defaulting.(func(*ReplicaSet))(in)
+	}
+	if err := s.Convert(&in.TypeMeta, &out.TypeMeta, 0); err != nil {
+		return err
+	}
+	if err := convert_v1_ObjectMeta_To_api_ObjectMeta(&in.ObjectMeta, &out.ObjectMeta, s); err != nil {
+		return err
+	}
+	if err := convert_v1beta1_ReplicaSetSpec_To_extensions_ReplicaSetSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	if err := convert_v1beta1_ReplicaSetStatus_To_extensions_ReplicaSetStatus(&in.Status, &out.Status, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+func convert_v1beta1_ReplicaSet_To_extensions_ReplicaSet(in *ReplicaSet, out *extensions.ReplicaSet, s conversion.Scope) error {
+	return autoconvert_v1beta1_ReplicaSet_To_extensions_ReplicaSet(in, out, s)
+}
+
+func autoconvert_v1beta1_ReplicaSetList_To_extensions_ReplicaSetList(in *ReplicaSetList, out *extensions.ReplicaSetList, s conversion.Scope) error {
+	if defaulting, found := s.DefaultingInterface(reflect.TypeOf(*in)); found {
+		defaulting.(func(*ReplicaSetList))(in)
+	}
+	if err := s.Convert(&in.TypeMeta, &out.TypeMeta, 0); err != nil {
+		return err
+	}
+	if err := s.Convert(&in.ListMeta, &out.ListMeta, 0); err != nil {
+		return err
+	}
+	if in.Items != nil {
+		out.Items = make([]extensions.ReplicaSet, len(in.Items))
+		for i := range in.Items {
+			if err := convert_v1beta1_ReplicaSet_To_extensions_ReplicaSet(&in.Items[i], &out.Items[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
+	return nil
+}
+
+func convert_v1beta1_ReplicaSetList_To_extensions_ReplicaSetList(in *ReplicaSetList, out *extensions.ReplicaSetList, s conversion.Scope) error {
+	return autoconvert_v1beta1_ReplicaSetList_To_extensions_ReplicaSetList(in, out, s)
+}
+
+func autoconvert_v1beta1_ReplicaSetSpec_To_extensions_ReplicaSetSpec(in *ReplicaSetSpec, out *extensions.ReplicaSetSpec, s conversion.Scope) error {
+	if defaulting, found := s.DefaultingInterface(reflect.TypeOf(*in)); found {
+		defaulting.(func(*ReplicaSetSpec))(in)
+	}
+	// in.Replicas has no peer in out
+	if in.Selector != nil {
+		out.Selector = new(extensions.LabelSelector)
+		if err := convert_v1beta1_LabelSelector_To_extensions_LabelSelector(in.Selector, out.Selector, s); err != nil {
+			return err
+		}
+	} else {
+		out.Selector = nil
+	}
+	if in.Template != nil {
+		out.Template = new(api.PodTemplateSpec)
+		if err := convert_v1_PodTemplateSpec_To_api_PodTemplateSpec(in.Template, out.Template, s); err != nil {
+			return err
+		}
+	} else {
+		out.Template = nil
+	}
+	return nil
+}
+
+func autoconvert_v1beta1_ReplicaSetStatus_To_extensions_ReplicaSetStatus(in *ReplicaSetStatus, out *extensions.ReplicaSetStatus, s conversion.Scope) error {
+	if defaulting, found := s.DefaultingInterface(reflect.TypeOf(*in)); found {
+		defaulting.(func(*ReplicaSetStatus))(in)
+	}
+	out.Replicas = in.Replicas
+	out.ObservedGeneration = in.ObservedGeneration
+	return nil
+}
+
+func convert_v1beta1_ReplicaSetStatus_To_extensions_ReplicaSetStatus(in *ReplicaSetStatus, out *extensions.ReplicaSetStatus, s conversion.Scope) error {
+	return autoconvert_v1beta1_ReplicaSetStatus_To_extensions_ReplicaSetStatus(in, out, s)
+}
+
 func autoconvert_v1beta1_ReplicationControllerDummy_To_extensions_ReplicationControllerDummy(in *ReplicationControllerDummy, out *extensions.ReplicationControllerDummy, s conversion.Scope) error {
 	if defaulting, found := s.DefaultingInterface(reflect.TypeOf(*in)); found {
 		defaulting.(func(*ReplicationControllerDummy))(in)
@@ -4145,9 +4321,9 @@ func autoconvert_v1beta1_ScaleStatus_To_extensions_ScaleStatus(in *ScaleStatus, 
 	}
 	out.Replicas = int(in.Replicas)
 	if in.Selector != nil {
-		out.Selector = make(map[string]string)
-		for key, val := range in.Selector {
-			out.Selector[key] = val
+		out.Selector = new(extensions.LabelSelector)
+		if err := convert_v1beta1_LabelSelector_To_extensions_LabelSelector(in.Selector, out.Selector, s); err != nil {
+			return err
 		}
 	} else {
 		out.Selector = nil
@@ -4357,6 +4533,10 @@ func init() {
 		autoconvert_extensions_LabelSelectorRequirement_To_v1beta1_LabelSelectorRequirement,
 		autoconvert_extensions_LabelSelector_To_v1beta1_LabelSelector,
 		autoconvert_extensions_NodeUtilization_To_v1beta1_NodeUtilization,
+		autoconvert_extensions_ReplicaSetList_To_v1beta1_ReplicaSetList,
+		autoconvert_extensions_ReplicaSetSpec_To_v1beta1_ReplicaSetSpec,
+		autoconvert_extensions_ReplicaSetStatus_To_v1beta1_ReplicaSetStatus,
+		autoconvert_extensions_ReplicaSet_To_v1beta1_ReplicaSet,
 		autoconvert_extensions_ReplicationControllerDummy_To_v1beta1_ReplicationControllerDummy,
 		autoconvert_extensions_RollingUpdateDeployment_To_v1beta1_RollingUpdateDeployment,
 		autoconvert_extensions_ScaleSpec_To_v1beta1_ScaleSpec,
@@ -4445,6 +4625,10 @@ func init() {
 		autoconvert_v1beta1_LabelSelector_To_extensions_LabelSelector,
 		autoconvert_v1beta1_ListOptions_To_api_ListOptions,
 		autoconvert_v1beta1_NodeUtilization_To_extensions_NodeUtilization,
+		autoconvert_v1beta1_ReplicaSetList_To_extensions_ReplicaSetList,
+		autoconvert_v1beta1_ReplicaSetSpec_To_extensions_ReplicaSetSpec,
+		autoconvert_v1beta1_ReplicaSetStatus_To_extensions_ReplicaSetStatus,
+		autoconvert_v1beta1_ReplicaSet_To_extensions_ReplicaSet,
 		autoconvert_v1beta1_ReplicationControllerDummy_To_extensions_ReplicationControllerDummy,
 		autoconvert_v1beta1_RollingUpdateDeployment_To_extensions_RollingUpdateDeployment,
 		autoconvert_v1beta1_ScaleSpec_To_extensions_ScaleSpec,

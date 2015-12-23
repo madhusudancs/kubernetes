@@ -4415,7 +4415,7 @@
       "description": "actual number of observed instances of the scaled object."
      },
      "selector": {
-      "type": "any",
+      "$ref": "v1beta1.LabelSelector",
       "description": "label query over pods that should match the replicas count. More info: http://releases.k8s.io/HEAD/docs/user-guide/labels.md#label-selectors"
      }
     }
