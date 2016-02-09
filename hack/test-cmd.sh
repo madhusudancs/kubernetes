@@ -234,6 +234,7 @@ runTests() {
   rc_replicas_field=".spec.replicas"
   rc_status_replicas_field=".status.replicas"
   rc_container_image_field=".spec.template.spec.containers"
+  rs_replicas_field=".spec.replicas"
   port_field="(index .spec.ports 0).port"
   port_name="(index .spec.ports 0).name"
   second_port_field="(index .spec.ports 1).port"
@@ -943,6 +944,7 @@ __EOF__
   kubectl scale  --replicas=2 -f examples/guestbook/frontend-controller.yaml "${kube_flags[@]}"
   # Post-condition: 2 replicas
   kube::test::get_object_assert 'rc frontend' "{{$rc_replicas_field}}" '2'
+  # Clean-up
   kubectl delete rc frontend "${kube_flags[@]}"
 
   ### Scale multiple replication controllers
@@ -1134,6 +1136,99 @@ __EOF__
   # Clean up
   kubectl delete deployment nginx-deployment "${kube_flags[@]}"
   kubectl delete rs -l pod-template-hash "${kube_flags[@]}"
+
+
+  ######################
+  # Replica Sets       #
+  ######################
+
+  kube::log::status "Testing kubectl(${version}:replicationsets)"
+
+  ### Create and stop a replica set, make sure it doesn't leak pods
+  # Pre-condition: no replica set exists
+  kube::test::get_object_assert rs "{{range.items}}{{$id_field}}:{{end}}" ''
+  # Command
+  kubectl create -f examples/extensions/replicaset/frontend-controller.yaml "${kube_flags[@]}"
+  kubectl delete rs frontend "${kube_flags[@]}"
+  # Post-condition: no pods from frontend replica set
+  kube::test::get_object_assert 'pods -l "name=frontend"' "{{range.items}}{{$id_field}}:{{end}}" ''
+
+  ### Create replica set frontend from JSON
+  # Pre-condition: no replica set exists
+  kube::test::get_object_assert rs "{{range.items}}{{$id_field}}:{{end}}" ''
+  # Command
+  kubectl create -f examples/extensions/replicaset/frontend-controller.yaml "${kube_flags[@]}"
+  # Post-condition: frontend replica set is created
+  kube::test::get_object_assert rs "{{range.items}}{{$id_field}}:{{end}}" 'frontend:'
+
+  # TODO(madhusudancs): Add describe tests once PR #20886 that implements describe for ReplicaSet is merged.
+
+  ### Scale replica set frontend with current-replicas and replicas
+  # Pre-condition: 3 replicas
+  kube::test::get_object_assert 'rs frontend' "{{$rs_replicas_field}}" '3'
+  # Command
+  kubectl scale --current-replicas=3 --replicas=2 replicasets frontend "${kube_flags[@]}"
+  # Post-condition: 2 replicas
+  kube::test::get_object_assert 'rs frontend' "{{$rs_replicas_field}}" '2'
+  # Clean-up
+  kubectl delete rs frontend "${kube_flags[@]}"
+
+  # TODO(madhusudancs): Fix this when Scale group issues are resolved (see issue #18528).
+
+  ### Expose replica set as service
+  kubectl create -f examples/extensions/replicaset/frontend-controller.yaml "${kube_flags[@]}"
+  # Pre-condition: 3 replicas
+  kube::test::get_object_assert 'rs frontend' "{{$rs_replicas_field}}" '3'
+  # Command
+  kubectl expose rs frontend --port=80 "${kube_flags[@]}"
+  # Post-condition: service exists and the port is unnamed
+  kube::test::get_object_assert 'service frontend' "{{$port_name}} {{$port_field}}" '<no value> 80'
+  # Command
+  kubectl expose service frontend --port=443 --name=frontend-2 "${kube_flags[@]}"
+  # Post-condition: service exists and the port is unnamed
+  kube::test::get_object_assert 'service frontend-2' "{{$port_name}} {{$port_field}}" '<no value> 443'
+  # Command
+  kubectl create -f docs/admin/limitrange/valid-pod.yaml "${kube_flags[@]}"
+  kubectl expose pod valid-pod --port=444 --name=frontend-3 "${kube_flags[@]}"
+  # Post-condition: service exists and the port is unnamed
+  kube::test::get_object_assert 'service frontend-3' "{{$port_name}} {{$port_field}}" '<no value> 444'
+  # Create a service using service/v1 generator
+  kubectl expose rs frontend --port=80 --name=frontend-4 --generator=service/v1 "${kube_flags[@]}"
+  # Post-condition: service exists and the port is named default.
+  kube::test::get_object_assert 'service frontend-4' "{{$port_name}} {{$port_field}}" 'default 80'
+  # Verify that expose service works without specifying a port.
+  kubectl expose service frontend --name=frontend-5 "${kube_flags[@]}"
+  # Post-condition: service exists with the same port as the original service.
+  kube::test::get_object_assert 'service frontend-5' "{{$port_field}}" '80'
+  # Cleanup services
+  kubectl delete pod valid-pod "${kube_flags[@]}"
+  kubectl delete service frontend{,-2,-3,-4,-5} "${kube_flags[@]}"
+
+  ### Delete replica set with id
+  # Pre-condition: frontend replica set exists
+  kube::test::get_object_assert rs "{{range.items}}{{$id_field}}:{{end}}" 'frontend:'
+  # Command
+  kubectl delete rs frontend "${kube_flags[@]}"
+  # Post-condition: no replica set exists
+  kube::test::get_object_assert rs "{{range.items}}{{$id_field}}:{{end}}" ''
+
+  ### Create two replica sets
+  # Pre-condition: no replica set exists
+  kube::test::get_object_assert rs "{{range.items}}{{$id_field}}:{{end}}" ''
+  # Command
+  kubectl create -f examples/extensions/replicaset/frontend-controller.yaml "${kube_flags[@]}"
+  kubectl create -f examples/extensions/replicaset/redis-slave-controller.yaml "${kube_flags[@]}"
+  # Post-condition: frontend and redis-slave
+  kube::test::get_object_assert rs "{{range.items}}{{$id_field}}:{{end}}" 'frontend:redis-slave:'
+
+  ### Delete multiple replica sets at once
+  # Pre-condition: frontend and redis-slave
+  kube::test::get_object_assert rs "{{range.items}}{{$id_field}}:{{end}}" 'frontend:redis-slave:'
+  # Command
+  kubectl delete rs frontend redis-slave "${kube_flags[@]}" # delete multiple replica sets at once
+  # Post-condition: no replica set exists
+  kube::test::get_object_assert rs "{{range.items}}{{$id_field}}:{{end}}" ''
+
 
   ######################
   # ConfigMap          #

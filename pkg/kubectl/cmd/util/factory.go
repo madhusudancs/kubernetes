@@ -266,6 +266,12 @@ func NewFactory(optionalClientConfig clientcmd.ClientConfig) *Factory {
 					return "", fmt.Errorf("failed to convert label selector to selector: %v", err)
 				}
 				return selector.String(), nil
+			case *extensions.ReplicaSet:
+				selector, err := unversioned.LabelSelectorAsSelector(t.Spec.Selector)
+				if err != nil {
+					return "", fmt.Errorf("failed to convert label selector to selector: %v", err)
+				}
+				return selector.String(), nil
 			default:
 				gvk, err := api.Scheme.ObjectKind(object)
 				if err != nil {
@@ -290,6 +296,13 @@ func NewFactory(optionalClientConfig clientcmd.ClientConfig) *Factory {
 				}
 				return kubectl.MakeLabels(t.Spec.Selector), nil
 			case *extensions.Deployment:
+				// TODO(madhusudancs): Make this smarter by admitting MatchExpressions with Equals
+				// operator, DoubleEquals operator and In operator with only one element in the set.
+				if len(t.Spec.Selector.MatchExpressions) > 0 {
+					return "", fmt.Errorf("couldn't convert expressions - \"%+v\" to map-based selector format")
+				}
+				return kubectl.MakeLabels(t.Spec.Selector.MatchLabels), nil
+			case *extensions.ReplicaSet:
 				// TODO(madhusudancs): Make this smarter by admitting MatchExpressions with Equals
 				// operator, DoubleEquals operator and In operator with only one element in the set.
 				if len(t.Spec.Selector.MatchExpressions) > 0 {
@@ -462,7 +475,7 @@ func NewFactory(optionalClientConfig clientcmd.ClientConfig) *Factory {
 		},
 		CanBeExposed: func(kind unversioned.GroupKind) error {
 			switch kind {
-			case api.Kind("ReplicationController"), api.Kind("Service"), api.Kind("Pod"), extensions.Kind("Deployment"):
+			case api.Kind("ReplicationController"), api.Kind("Service"), api.Kind("Pod"), extensions.Kind("Deployment"), extensions.Kind("ReplicaSet"):
 				// nothing to do here
 			default:
 				return fmt.Errorf("cannot expose a %s", kind)
