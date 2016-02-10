@@ -328,6 +328,8 @@ func NewFactory(optionalClientConfig clientcmd.ClientConfig) *Factory {
 				return getServicePorts(t.Spec), nil
 			case *extensions.Deployment:
 				return getPorts(t.Spec.Template.Spec), nil
+			case *extensions.ReplicaSet:
+				return getPorts(t.Spec.Template.Spec), nil
 			default:
 				gvk, err := api.Scheme.ObjectKind(object)
 				if err != nil {

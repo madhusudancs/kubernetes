@@ -1142,22 +1142,22 @@ __EOF__
   # Replica Sets       #
   ######################
 
-  kube::log::status "Testing kubectl(${version}:replicationsets)"
+  kube::log::status "Testing kubectl(${version}:replicasets)"
 
   ### Create and stop a replica set, make sure it doesn't leak pods
   # Pre-condition: no replica set exists
   kube::test::get_object_assert rs "{{range.items}}{{$id_field}}:{{end}}" ''
   # Command
-  kubectl create -f examples/extensions/replicaset/frontend-controller.yaml "${kube_flags[@]}"
+  kubectl create -f docs/user-guide/replicaset/frontend.yaml "${kube_flags[@]}"
   kubectl delete rs frontend "${kube_flags[@]}"
   # Post-condition: no pods from frontend replica set
-  kube::test::get_object_assert 'pods -l "name=frontend"' "{{range.items}}{{$id_field}}:{{end}}" ''
+  kube::test::get_object_assert 'pods -l "tier=frontend"' "{{range.items}}{{$id_field}}:{{end}}" ''
 
-  ### Create replica set frontend from JSON
+  ### Create replica set frontend from YAML
   # Pre-condition: no replica set exists
   kube::test::get_object_assert rs "{{range.items}}{{$id_field}}:{{end}}" ''
   # Command
-  kubectl create -f examples/extensions/replicaset/frontend-controller.yaml "${kube_flags[@]}"
+  kubectl create -f docs/user-guide/replicaset/frontend.yaml "${kube_flags[@]}"
   # Post-condition: frontend replica set is created
   kube::test::get_object_assert rs "{{range.items}}{{$id_field}}:{{end}}" 'frontend:'
 
@@ -1176,33 +1176,19 @@ __EOF__
   # TODO(madhusudancs): Fix this when Scale group issues are resolved (see issue #18528).
 
   ### Expose replica set as service
-  kubectl create -f examples/extensions/replicaset/frontend-controller.yaml "${kube_flags[@]}"
+  kubectl create -f docs/user-guide/replicaset/frontend.yaml "${kube_flags[@]}"
   # Pre-condition: 3 replicas
   kube::test::get_object_assert 'rs frontend' "{{$rs_replicas_field}}" '3'
   # Command
   kubectl expose rs frontend --port=80 "${kube_flags[@]}"
   # Post-condition: service exists and the port is unnamed
   kube::test::get_object_assert 'service frontend' "{{$port_name}} {{$port_field}}" '<no value> 80'
-  # Command
-  kubectl expose service frontend --port=443 --name=frontend-2 "${kube_flags[@]}"
-  # Post-condition: service exists and the port is unnamed
-  kube::test::get_object_assert 'service frontend-2' "{{$port_name}} {{$port_field}}" '<no value> 443'
-  # Command
-  kubectl create -f docs/admin/limitrange/valid-pod.yaml "${kube_flags[@]}"
-  kubectl expose pod valid-pod --port=444 --name=frontend-3 "${kube_flags[@]}"
-  # Post-condition: service exists and the port is unnamed
-  kube::test::get_object_assert 'service frontend-3' "{{$port_name}} {{$port_field}}" '<no value> 444'
   # Create a service using service/v1 generator
-  kubectl expose rs frontend --port=80 --name=frontend-4 --generator=service/v1 "${kube_flags[@]}"
+  kubectl expose rs frontend --port=80 --name=frontend-2 --generator=service/v1 "${kube_flags[@]}"
   # Post-condition: service exists and the port is named default.
-  kube::test::get_object_assert 'service frontend-4' "{{$port_name}} {{$port_field}}" 'default 80'
-  # Verify that expose service works without specifying a port.
-  kubectl expose service frontend --name=frontend-5 "${kube_flags[@]}"
-  # Post-condition: service exists with the same port as the original service.
-  kube::test::get_object_assert 'service frontend-5' "{{$port_field}}" '80'
+  kube::test::get_object_assert 'service frontend-2' "{{$port_name}} {{$port_field}}" 'default 80'
   # Cleanup services
-  kubectl delete pod valid-pod "${kube_flags[@]}"
-  kubectl delete service frontend{,-2,-3,-4,-5} "${kube_flags[@]}"
+  kubectl delete service frontend{,-2} "${kube_flags[@]}"
 
   ### Delete replica set with id
   # Pre-condition: frontend replica set exists
@@ -1216,8 +1202,8 @@ __EOF__
   # Pre-condition: no replica set exists
   kube::test::get_object_assert rs "{{range.items}}{{$id_field}}:{{end}}" ''
   # Command
-  kubectl create -f examples/extensions/replicaset/frontend-controller.yaml "${kube_flags[@]}"
-  kubectl create -f examples/extensions/replicaset/redis-slave-controller.yaml "${kube_flags[@]}"
+  kubectl create -f docs/user-guide/replicaset/frontend.yaml "${kube_flags[@]}"
+  kubectl create -f docs/user-guide/replicaset/redis-slave.yaml "${kube_flags[@]}"
   # Post-condition: frontend and redis-slave
   kube::test::get_object_assert rs "{{range.items}}{{$id_field}}:{{end}}" 'frontend:redis-slave:'
 

@@ -97,7 +97,7 @@ if no labels are specified, the new service will re\-use the labels from the res
 
 .PP
 \fB\-\-selector\fP=""
-    A label selector to use for this service. If empty (the default) infer the selector from the replication controller.
+    A label selector to use for this service. Only equality\-based selector requirements are supported. If empty (the default) infer the selector from the replication controller or replica set.
 
 .PP
 \fB\-\-session\-affinity\fP=""
