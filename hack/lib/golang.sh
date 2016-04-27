@@ -114,6 +114,7 @@ kube::golang::test_targets() {
     cmd/linkcheck
     examples/k8petstore/web-server/src
     github.com/onsi/ginkgo/ginkgo
+    hack/cmd/teststale
     test/e2e/e2e.test
     test/e2e_node/e2e_node.test
   )
@@ -443,9 +444,17 @@ kube::golang::build_binaries_for_platform() {
     fi
   fi
 
+  teststale=$(kube::golang::output_filename_for_binary "hack/cmd/teststale" "${platform}")
   for test in "${tests[@]:+${tests[@]}}"; do
     local outfile=$(kube::golang::output_filename_for_binary "${test}" \
       "${platform}")
+    local testpkg="$(dirname ${test})"
+    if [[ "$(${teststale} -binary "${outfile}" -package "${testpkg}")" == "false" ]]; then
+      continue
+    fi
+    go install "${goflags[@]:+${goflags[@]}}" \
+        -ldflags "${goldflags}" \
+        "${testpkg}"
     # Go 1.4 added -o to control where the binary is saved, but Go 1.3 doesn't
     # have this flag. Whenever we deprecate go 1.3, update to use -o instead of
     # changing into the output directory.
@@ -454,7 +463,7 @@ kube::golang::build_binaries_for_platform() {
     go test -c \
       "${goflags[@]:+${goflags[@]}}" \
       -ldflags "${goldflags}" \
-      "$(dirname ${test})"
+      "${testpkg}"
     popd >/dev/null
   done
 }
