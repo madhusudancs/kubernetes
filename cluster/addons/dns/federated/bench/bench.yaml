@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dns-bench
+spec:
+  containers:
+  - image: gcr.io/madhusudancs-k8s/dnsbench-amd64:1.15
+    args:
+      # command = "/bench"
+      - -host=kubernetes
+      - -federatedns=10.59.247.242
+      - -iterations=100000
+    imagePullPolicy: Always
+    name: ubuntu
+  restartPolicy: Never

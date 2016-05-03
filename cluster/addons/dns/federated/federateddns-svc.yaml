@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: federated-dns
+  labels:
+    k8s-app: federated-dns
+spec:
+  selector:
+    k8s-app: federated-dns
+  ports:
+  - name: dns
+    port: 53
+    protocol: UDP
+  - name: dns-tcp
+    port: 53
+    protocol: TCP
