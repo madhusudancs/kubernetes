@@ -204,8 +204,8 @@ if [[ "${ACTION}" == "gen" || "${ACTION}" == "deploy" ]]; then
 	kube_action
 	federation_action
 else
-	federation_action
-	kube_action
+	federation_action || echo "Could not turn down federation components"
+	kube_action || echo "Could not turn down the clusters"
 fi
 
 kube::log::status "Successfully completed!"
